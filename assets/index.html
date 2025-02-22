@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Text-Based Game</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h1 class="card-title text-center">Interactive Text-Based Game</h1>
+                <div id="output" class="p-3 mb-3 bg-secondary text-white rounded" style="min-height: 150px;"></div>
+                <div id="choices" class="d-flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        const choices = document.getElementById('choices');
+
+        const gameData = {
+            start: {
+                text: 'You find yourself in a dark forest. Paths lead to the north and east.',
+                choices: [
+                    { text: 'Go North', next: 'northPath' },
+                    { text: 'Go East', next: 'eastPath' }
+                ]
+            },
+            northPath: {
+                text: 'You encounter a wild wolf! What do you do?',
+                choices: [
+                    { text: 'Fight', next: 'fightWolf' },
+                    { text: 'Run', next: 'runAway' }
+                ]
+            },
+            eastPath: {
+                text: 'You discover a tranquil lake. You feel safe here. You win!',
+                choices: []
+            },
+            fightWolf: {
+                text: 'The wolf overpowers you. You lose!',
+                choices: []
+            },
+            runAway: {
+                text: 'You escape back to the start.',
+                choices: [
+                    { text: 'Go North', next: 'northPath' },
+                    { text: 'Go East', next: 'eastPath' }
+                ]
+            }
+        };
+
+        function renderScene(sceneKey) {
+            const scene = gameData[sceneKey];
+            output.innerText = scene.text;
+            choices.innerHTML = '';
+            scene.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-primary';
+                button.innerText = choice.text;
+                button.onclick = () => renderScene(choice.next);
+                choices.appendChild(button);
+            });
+        }
+
+        renderScene('start');
+    </script>
+</body>
+</html>
