@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apocalypse Survival Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #222; color: #fff; transition: background-color 0.5s ease; }
+        #choices { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; background-color: rgba(0, 0, 0, 0.5); border-radius: 10px; margin: 20px auto; max-width: 400px; }
+        #choices button { width: 100%; padding: 10px; }
+        .win { background-color: #4CAF50 !important; color: white; }
+        .lose { background-color: #f44336 !important; color: white; }
+        .flash-red { animation: flashRed 0.5s; }
+        .flash-green { animation: flashGreen 0.5s; }
+        @keyframes flashRed { 0%, 100% { background-color: #222; } 50% { background-color: #f44336; } }
+        @keyframes flashGreen { 0%, 100% { background-color: #222; } 50% { background-color: #4CAF50; } }
+    </style>
+</head>
+<body class="container mt-4">
+    <div id="welcome-screen">
+        <h1>Welcome to Apocalypse Survival</h1>
+        <p>Enter your name to start:</p>
+        <input type="text" id="player-name" class="form-control mb-2" placeholder="Your Name">
+        <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+    </div>
+    
+    <div id="game-screen" style="display: none;">
+        <h1 class="mb-3" id="game-title">Apocalypse Survival</h1>
+        <p id="story" class="lead">Loading...</p>
+        <div id="choices" class="d-grid gap-2"></div>
+        <div class="mt-3">
+            <button class="btn btn-secondary" onclick="showStats()">View Stats</button>
+        </div>
+        <p id="stats" class="mt-3"></p>
+    </div>
+
+    <script>
+        let playerName = "";
+        let gameState = {};
+
+        function startGame() {
+            playerName = document.getElementById("player-name").value.trim();
+            if (playerName === "") {
+                alert("Please enter your name to start the game.");
+                return;
+            }
+            gameState = {
+                currentPath: 0,
+                inventory: [],
+                points: 0,
+                health: 10,
+                hunger: 10,
+                stats: { strength: 5, intelligence: 5, agility: 5 }
+            };
+            document.getElementById("welcome-screen").style.display = "none";
+            document.getElementById("game-screen").style.display = "block";
+            document.getElementById("story").innerText = `Welcome, ${playerName}! The apocalypse has begun. Your choices will determine your fate.`;
+            setTimeout(() => displayPath(0), 2000); // Delay to let the player read the welcome message
+        }
+
+        const paths = [
+            { id: 0, text: "You wake up in a ruined city. Do you search for supplies or look for survivors?", options: [
+                { text: "Search for supplies", nextPath: 1, effect: { intelligence: 1, inventory: "food", points: 2 } },
+                { text: "Look for survivors", nextPath: 2, effect: { strength: 1, points: 1 } }
+            ]},
+            { id: 1, text: "You find a backpack with food and a flashlight. Do you go to an abandoned house or keep moving?", options: [
+                { text: "Enter the house", nextPath: 3, effect: { intelligence: 1, hunger: -2 } },
+                { text: "Keep moving", nextPath: 4, effect: { agility: 1, hunger: -1 } }
+            ]},
+            { id: 2, text: "You find a group of survivors. Do you help them search for food or convince them to join you?", options: [
+                { text: "Help them search for food", nextPath: 5, effect: { intelligence: 2, hunger: -3, points: 3 } },
+                { text: "Convince them to join you", nextPath: 6, effect: { strength: 1, points: 2 } }
+            ]},
+            { id: 3, text: "You enter the house and find a hidden stash of supplies. Do you take it or leave it?", options: [
+                { text: "Take the supplies", nextPath: 7, effect: { inventory: "medkit", points: 5 } },
+                { text: "Leave it", nextPath: 8, effect: { intelligence: 1, points: 1 } }
+            ]},
+            { id: 4, text: "You encounter a hostile group. Do you negotiate or fight?", options: [
+                { text: "Negotiate", nextPath: 9, effect: { intelligence: 2, health: -1 } },
+                { text: "Fight", nextPath: 10, effect: { strength: 2, health: -3 } }
+            ]},
+            { id: 5, text: "You find a river. Do you drink the water or avoid it?", options: [
+                { text: "Drink the water", nextPath: 11, effect: { health: -2, hunger: 1 } },
+                { text: "Avoid the water", nextPath: 12, effect: { hunger: -1 } }
+            ]},
+            { id: 6, text: "You find a working vehicle. Do you take it or leave it?", options: [
+                { text: "Take the vehicle", nextPath: 13, effect: { agility: 2, points: 3 } },
+                { text: "Leave it", nextPath: 14, effect: { points: 1 } }
+            ]},
+            { id: 7, text: "You use the vehicle to reach safety. You win!", options: [] },
+            { id: 8, text: "You leave the vehicle and continue on foot. You lose!", options: [] },
+            { id: 9, text: "You successfully negotiate and gain their trust. You win!", options: [] },
+            { id: 10, text: "You fight but are overwhelmed. You lose!", options: [] },
+            { id: 11, text: "The water was contaminated. You fall ill and lose!", options: [] },
+            { id: 12, text: "You avoid the water and continue your journey.", options: [
+                { text: "Continue", nextPath: 15, effect: { points: 1 } }
+            ]},
+            { id: 13, text: "You use the vehicle to reach safety. You win!", options: [] },
+            { id: 14, text: "You leave the vehicle and continue on foot. You lose!", options: [] },
+            { id: 15, text: "You find a safe haven. You win!", options: [] }
+        ];
+
+        function applyEffects(effect) {
+            if (!effect) return;
+            for (let key in effect) {
+                if (key === "inventory") {
+                    gameState.inventory.push(effect[key]);
+                } else if (key in gameState.stats) {
+                    gameState.stats[key] += effect[key];
+                } else {
+                    gameState[key] += effect[key];
+                }
+            }
+
+            if (effect.health < 0) {
+                document.body.classList.add("flash-red");
+                setTimeout(() => document.body.classList.remove("flash-red"), 500);
+            }
+            if (effect.points > 0) {
+                document.body.classList.add("flash-green");
+                setTimeout(() => document.body.classList.remove("flash-green"), 500);
+            }
+
+            if (gameState.hunger <= 0) {
+                gameState.health -= 2;
+            }
+
+            if (gameState.health <= 0) {
+                alert("You died! Game over.");
+                location.reload();
+            }
+        }
+
+        function showStats() {
+            document.getElementById("stats").innerText =
+                `Strength: ${gameState.stats.strength}, ` +
+                `Intelligence: ${gameState.stats.intelligence}, ` +
+                `Agility: ${gameState.stats.agility}, ` +
+                `Points: ${gameState.points}, ` +
+                `Health: ${gameState.health}, ` +
+                `Hunger: ${gameState.hunger}, ` +
+                `Inventory: ${gameState.inventory.join(", ") || "None"}`;
+        }
+
+        function displayPath(pathId) {
+            const path = paths.find(p => p.id === pathId);
+            if (!path) {
+                alert("The story has ended. Refresh the page to play again.");
+                return;
+            }
+
+            gameState.currentPath = pathId;
+            document.getElementById('story').innerText = path.text;
+            const buttons = document.getElementById('choices');
+            buttons.innerHTML = '';
+
+            if (path.options.length === 0) {
+                // End of path, show win/lose message
+                const message = path.text.includes("win") ? "Congratulations, you won!" : "Sorry, you lost!";
+                buttons.innerHTML = `<p class="lead">${message}</p><button class="btn btn-primary" onclick="location.reload()">Play Again</button>`;
+            } else {
+                path.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.className = "btn btn-outline-light";
+                    button.innerText = option.text;
+                    button.onclick = () => {
+                        applyEffects(option.effect);
+                        displayPath(option.nextPath);
+                    };
+                    buttons.appendChild(button);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
